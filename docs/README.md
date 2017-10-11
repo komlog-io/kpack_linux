@@ -1,6 +1,8 @@
 kpack_linux
 -----------
 
+[![IRC #Komlog](https://img.shields.io/badge/irc.freenode.net-%23komlog-blue.svg)]()
+
 kpack_linux is a [komlogd](<https://github.com/komlog-io/komlogd>) package
 for monitoring and visualizing linux servers metrics.
 
@@ -45,6 +47,6 @@ and adjust them to your needs.
 # Contributing and Help
 
 Feel free to fork this repo and make your pull requests. **Thank you** for your contributions.
-If you need help, please visit our [gitter chat](https://gitter.im/komlog_/komlog) or our
+If you need help, please visit our IRC Channel #Komlog (Freenode) or our
 [mailing lists](https://groups.google.com/forum/#!forum/komlog).
 
