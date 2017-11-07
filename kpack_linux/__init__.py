@@ -59,10 +59,11 @@ class CPU:
             transfermethod(f=self.check_anom, schedule=OnUpdateSchedule(activation_metrics=self.use_metrics)),
         ]
 
+    async def load(self):
         for tm in self.tms:
-            tm.bind()
+            await tm.bind()
 
-    def update(self, t, content):
+    async def update(self, t, content):
         if not content:
             return
         cpu_block = False
@@ -130,10 +131,11 @@ class Memory:
             transfermethod(f=self.check_anom, schedule=OnUpdateSchedule(activation_metrics=self.use_metrics)),
         ]
 
+    async def load(self):
         for tm in self.tms:
-            tm.bind()
+            await tm.bind()
 
-    def update(self, t, content):
+    async def update(self, t, content):
         if not content:
             return
         swp_block = False
@@ -196,7 +198,11 @@ class Storage:
         self._fss = []
         self.tms = []
 
-    def update(self, t, content):
+    async def load(self):
+        for tm in self.tms:
+            await tm.bind()
+
+    async def update(self, t, content):
         if not content:
             return
         dev_block = False
@@ -227,10 +233,10 @@ class Storage:
                     for line in block:
                         value += line[margin:]+'\n'
                     value += '\n'
-            self.find_missing(value)
+            await self.find_missing(value)
             self.info.insert(t=t, value=value)
 
-    def find_missing(self, content):
+    async def find_missing(self, content):
         devs = []
         fss = []
         dev_block = False
@@ -274,7 +280,7 @@ class Storage:
                     'util':Datapoint(uri='.'.join((self.info.uri,dev,'util')))
                 }
                 tm = transfermethod(f=self.check_anom_dev, f_params=f_params)
-                tm.bind()
+                await tm.bind()
                 self.tms.append(tm)
         for fs in fss:
             if not fs in self._fss:
@@ -288,7 +294,7 @@ class Storage:
                     'pIused':Datapoint(uri='.'.join((self.info.uri,fs,'pIused')))
                 }
                 tm = transfermethod(f=self.check_anom_fs, f_params=f_params)
-                tm.bind()
+                await tm.bind()
                 self.tms.append(tm)
 
     async def check_anom_dev(self, t, util):
@@ -316,7 +322,11 @@ class Network:
         self._ifaces = []
         self.tms = []
 
-    def update(self, t, content):
+    async def load(self):
+        for tm in self.tms:
+            await tm.bind()
+
+    async def update(self, t, content):
         if not content:
             return
         tr_block = False
@@ -347,7 +357,7 @@ class Network:
                     for line in block:
                         value += line[margin:]+'\n'
                     value += '\n'
-            self.find_missing(value)
+            await self.find_missing(value)
             self.info.insert(t=t, value=value)
 
     async def check_anom(self, t, ifutil):
@@ -356,7 +366,7 @@ class Network:
             anom = Anomaly(self.info)
             anom.insert(t=t, value=1)
 
-    def find_missing(self, content):
+    async def find_missing(self, content):
         ifaces = []
         iface_block = False
         for line in content.split('\n'):
@@ -385,7 +395,7 @@ class Network:
                     'ifutil':Datapoint(uri='.'.join((self.info.uri,iface,'ifutil')))
                 }
                 tm = transfermethod(f=self.check_anom, f_params=f_params)
-                tm.bind()
+                await tm.bind()
                 self.tms.append(tm)
 
 class LinuxHost:
@@ -405,12 +415,17 @@ class LinuxHost:
             transfermethod(f=self.check, schedule=settings.SCHED)
         ]
 
+    async def load(self):
         for tm in self.tms:
-            tm.bind()
+            await tm.bind()
+        for res in self.resources:
+            await res.load()
+
 
     async def check(self, t):
         content = await run_cmd(self._cmd)
         if content:
             for res in self.resources:
-                res.update(t, content)
+                await res.update(t, content)
+
 
