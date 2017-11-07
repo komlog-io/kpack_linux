@@ -90,7 +90,7 @@ class CPU:
             else:
                 cpu_block = False
                 load_block = False
-        if header and cpu_block_lines and load_block_lines:
+        if header and (cpu_block_lines or load_block_lines):
             value = header+'\n\n'
             for block in [cpu_block_lines, load_block_lines]:
                 margin = get_margin(block)
@@ -168,7 +168,7 @@ class Memory:
                 swp_block = False
                 pg_block = False
                 mem_block = False
-        if swp_block_lines and pg_block_lines and mem_block_lines:
+        if swp_block_lines or pg_block_lines or mem_block_lines:
             value = ''
             for block in [mem_block_lines, swp_block_lines, pg_block_lines]:
                 margin = get_margin(block)
@@ -225,7 +225,7 @@ class Storage:
             else:
                 dev_block = False
                 fs_block = False
-        if dev_block_lines and fs_block_lines:
+        if dev_block_lines or fs_block_lines:
             value = ''
             for block in [dev_block_lines, fs_block_lines]:
                 margin = get_margin(block)
@@ -349,7 +349,7 @@ class Network:
             else:
                 tr_block = False
                 err_block = False
-        if tr_block_lines and err_block_lines:
+        if tr_block_lines or err_block_lines:
             value = ''
             for block in [tr_block_lines, err_block_lines]:
                 margin = get_margin(block)
