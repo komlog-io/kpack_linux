@@ -77,7 +77,7 @@ SCHED = CronSchedule(minute='*/5')
 
 ### 3.2 Setting your host uri
 
-By default, kpack_linux will store your information in uri *pkg.kpack_linux.<HOSTNAME>*.
+By default, kpack_linux will store your information in uri *pkg.kpack_linux.\<HOSTNAME\>*.
 This uri is controlled with var *BASE_URI* in [*settings.py*](/kpack_linux/settings.py) file. The value of this variable will
 be passed as *base_uri* argument when creating your LinuxHost object in [*load.py*](/kpack_linux/load.py) file.
 
