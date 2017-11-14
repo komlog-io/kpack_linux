@@ -111,9 +111,17 @@ class CPU:
         use = user + system + steal + nice
         sat_sz = t_runnable / cpu_count
         sat_ld = ldavg1 / cpu_count
-        anom = 1 if use[0] > 90 or (sat_sz[0] > 1 and sat_ld[0] > 1) else 0
-        anom_metric = Anomaly(metric=self.info)
-        anom_metric.insert(t=t, value=anom)
+        if use is None and (sat_sz is None or sat_ld is None):
+            return
+        elif use is not None and use[0] > 90:
+            anom_metric = Anomaly(metric=self.info)
+            anom_metric.insert(t=t, value=1)
+        elif sat_sz is not None and sat_ld is not None and sat_sz[0] > 1 and sat_ld[0] > 1:
+            anom_metric = Anomaly(metric=self.info)
+            anom_metric.insert(t=t, value=1)
+        else:
+            anom_metric = Anomaly(metric=self.info)
+            anom_metric.insert(t=t, value=0)
 
 class Memory:
 
@@ -181,9 +189,17 @@ class Memory:
     async def check_anom(self, t):
         memused = await self.use_metrics['memused'].get(t=t)
         majflt = await self.use_metrics['majflt'].get(t=t)
-        anom = 1 if memused[0] > 80 or majflt[0] > 100 else 0
-        anom_metric = Anomaly(metric=self.info)
-        anom_metric.insert(t=t, value=anom)
+        if memused is None and majflt is None:
+            return
+        elif memused is not None and memused[0] > 85:
+            anom_metric = Anomaly(metric=self.info)
+            anom_metric.insert(t=t, value=1)
+        elif majflt is not None and majflt[0] > 100:
+            anom_metric = Anomaly(metric=self.info)
+            anom_metric.insert(t=t, value=1)
+        else:
+            anom_metric = Anomaly(metric=self.info)
+            anom_metric.insert(t=t, value=0)
 
 class Storage:
     _dev_metrics = ['tps','rd_sec','wr_sec','avgrq-sz','avgqu-sz','await','svctm','util']
@@ -298,18 +314,40 @@ class Storage:
                 self.tms.append(tm)
 
     async def check_anom_dev(self, t, util):
-        util_s = await util.get(t=t)
-        if util_s[0] > 80:
-            anom = Anomaly(self.info)
-            anom.insert(t=t, value=1)
+        util_s = await util.get(end=t, count=2)
+        if util_s is not None:
+            anom = Anomaly(util)
+            if util_s[0] > 80:
+                # set anomaly signal to 1
+                anom.insert(t=t, value=1)
+            elif len(util_s)==2 and util_s.index[-1] < t and util_s[-1] > 80:
+                # cancel previously set anomaly
+                anom.insert(t=t, value=0)
 
     async def check_anom_fs(self, t, fsused, ufsused, pIused):
-        fsused_s = await fsused.get(t=t)
-        ufsused_s = await fsused.get(t=t)
-        pIused_s = await fsused.get(t=t)
-        if fsused_s[0] > 80 or ufsused_s[0] > 80 or pIused_s[0] > 80:
-            anom = Anomaly(self.info)
-            anom.insert(t=t, value=1)
+        fsused_s = await fsused.get(end=t, count=2)
+        ufsused_s = await ufsused.get(end=t, count=2)
+        pIused_s = await pIused.get(end=t, count=2)
+        if fsused_s is None and ufsused_s is None and pIused_s is None:
+            return
+        elif fsused_s is not None and fsused_s.index[0] == t:
+            if fsused_s[0] > 80:
+                fsused_anom = Anomaly(fsused)
+                fsused_anom.insert(t=t, value=1)
+            elif len(fsused_s) == 2 and fsused_s[-1] > 80:
+                fsused_anom.insert(t=t, value=0)
+        elif ufsused_s is not None and ufsused_s.index[0] == t:
+            if ufsused_s[0] > 80:
+                ufsused_anom = Anomaly(ufsused)
+                ufsused_anom.insert(t=t, value=1)
+            elif len(ufsused_s) == 2 and ufsused_s[-1] > 80:
+                ufsused_anom.insert(t=t, value=0)
+        elif pIused_s is not None and pIused_s.index[0] == t:
+            if pIused_s[0] > 80:
+                pIused_anom = Anomaly(pIused)
+                pIused_anom.insert(t=t, value=1)
+            elif len(pIused_s) == 2 and pIused_s[-1] > 80:
+                pIused_anom.insert(t=t, value=0)
 
 class Network:
     _iface_metrics = ['rxpck','txpck','rxkB','txkB','rxcmp','txcmp','rxmcst','ifutil','rxerr','txerr','coll','rxdrop','txdrop','txcarr','rxfram','rxfifo','txfifo']
@@ -360,12 +398,6 @@ class Network:
             await self.find_missing(value)
             self.info.insert(t=t, value=value)
 
-    async def check_anom(self, t, ifutil):
-        s = await ifutil.get(t=t)
-        if s[0] > 80:
-            anom = Anomaly(self.info)
-            anom.insert(t=t, value=1)
-
     async def find_missing(self, content):
         ifaces = []
         iface_block = False
@@ -397,6 +429,17 @@ class Network:
                 tm = transfermethod(f=self.check_anom, f_params=f_params)
                 await tm.bind()
                 self.tms.append(tm)
+
+    async def check_anom(self, t, ifutil):
+        ifutil_s = await ifutil.get(end=t, count=2)
+        if ifutil_s is not None:
+            anom = Anomaly(ifutil)
+            if ifutil_s[0] > 80:
+                # set anomaly signal
+                anom.insert(t=t, value=1)
+            elif len(ifutil_s) == 2 and ifutil_s.index[1] < t and ifutil_s[1] > 80:
+                # cancel previously set anomaly
+                anom.insert(t=t, value=0)
 
 class LinuxHost:
     _cmd = 'sar -BWrdFqu -n DEV,EDEV 2 1'
