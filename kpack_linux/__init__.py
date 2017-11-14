@@ -444,7 +444,7 @@ class Network:
 class LinuxHost:
     _cmd = 'sar -BWrdFqu -n DEV,EDEV 2 1'
 
-    def __init__(self, base_uri):
+    def __init__(self, base_uri, ssh_cmd=None):
         self.res_uri = '.'.join((base_uri,'system.resources'))
 
         self.resources = [
@@ -453,6 +453,9 @@ class LinuxHost:
             Storage(self.res_uri),
             Network(self.res_uri),
         ]
+
+        if ssh_cmd:
+            self._cmd = ' '.join((ssh_cmd,self._cmd))
 
         self.tms = [
             transfermethod(f=self.check, schedule=settings.SCHED)
